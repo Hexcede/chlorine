@@ -1,0 +1,9 @@
+/.vscode/
+/Packages/
+/DevPackages/
+
+# Project files
+/chlorine.rbxm
+
+# Wally lock file
+wally.lock

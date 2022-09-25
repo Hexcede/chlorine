@@ -1,0 +1,6 @@
+{
+	"name": "chlorine",
+	"tree": {
+		"$path": "./src/"
+	}
+}
