@@ -1,0 +1,27 @@
+{
+	"name": "chlorine-test",
+	"tree": {
+		"$className": "DataModel",
+		
+		"ReplicatedStorage": {
+			"$className": "ReplicatedStorage",
+
+			"Packages": {
+				"$path": "./Packages/",
+				"Chlorine": {
+					"$path": "./src/"
+				}
+			},
+			"DevPackages": {
+				"$path": "./DevPackages/"
+			}
+		},
+		"ServerScriptService": {
+			"$className": "ServerScriptService",
+
+			"Tests": {
+				"$path": "./tests/"
+			}
+		}
+	}
+}
