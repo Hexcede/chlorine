@@ -14,7 +14,8 @@ export type CustomRule = Rule & { Rule: RuleCallback; }
 export type AllowRule = Rule & { Rule: "Allow"; }
 export type BlockRule = Rule & { Rule: "Block"; }
 export type TerminateRule = Rule & { Rule: "Terminate"; }
-export type SandboxRule = CustomRule | AllowRule | BlockRule | TerminateRule
+export type ReplaceRule = Rule & { Rule: "Replace"; Replacement: any?; }
+export type SandboxRule = CustomRule | AllowRule | BlockRule | TerminateRule | ReplaceRule
 
 -- Proxy data symbol
 local PROXY_DATA = newproxy(false)
@@ -34,6 +35,10 @@ Environment.rules = table.freeze({
 		end
 		error("Terminate by rule.")
 		return result:withValue(nil)
+	end;
+	Replace = function(_environment: Environment, result: RuleResult)
+		local rule = result.rule :: ReplaceRule
+		return result:withValue(rule.Replacement)
 	end;
 });
 
