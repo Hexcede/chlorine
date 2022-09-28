@@ -318,4 +318,4 @@ function Environment.isCaller(level: number)
 end
 
 export type Environment = WithMeta<{}, typeof(Environment)>
-return Environment
+return table.freeze(Environment)
