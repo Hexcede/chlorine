@@ -5,15 +5,14 @@ type Query = Queries.Query
 local RuleResult = {}
 RuleResult.__index = RuleResult
 
-function RuleResult.new(rule: Rule, query: Query, value: any?)
+-- The result of a match from Rules:test()
+export type RuleResult = WithMeta<{rule: Rule, query: Query, value: any?}, typeof(RuleResult)>
+
+function RuleResult.new(rule: Rule, query: Query, value: any?): RuleResult
 	local result = setmetatable({
 		rule = rule;
 		query = query;
 		value = value;
-	} :: {
-		rule: Rule; -- The rule that matched
-		query: Query; -- The query that was matched
-		value: any?; -- The final value
 	}, RuleResult)
 	return table.freeze(result)
 end
@@ -34,9 +33,6 @@ export type Rule = {
 
 -- A comparator to use for sorting rules
 export type RuleComparator = ((ruleA: Rule, ruleB: Rule) -> boolean);
-
--- The result of a match from Rules:test()
-export type RuleResult = typeof(RuleResult.new(nil :: Rule, nil :: Query, nil :: any?))
 
 local Rules = {}
 Rules.__index = Rules
