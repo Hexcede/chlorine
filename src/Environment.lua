@@ -8,7 +8,7 @@ type Rules = Rules.Rules
 type Rule = Rules.Rule
 type RuleResult = Rules.RuleResult
 
-export type RuleCallback = (sandbox: Sandbox, match: RuleResult, environment: Environment) -> RuleResult?
+export type RuleCallback = (environment: Environment, match: RuleResult) -> RuleResult?
 
 export type CustomRule = Rule & { Rule: RuleCallback; }
 export type AllowRule = Rule & { Rule: "Allow"; }
