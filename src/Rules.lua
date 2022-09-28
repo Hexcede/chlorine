@@ -38,7 +38,7 @@ local Rules = {}
 Rules.__index = Rules
 
 -- Create a set of empty rules to copy from
-local EMPTY_RULES = setmetatable({n = 0}, Rules)
+local EMPTY_RULES = setmetatable({n = 0, _ruleMap = table.freeze({})}, Rules)
 
 function Rules.new(...: Rule)
 	-- Create an empty set of rules and freeze it
@@ -54,11 +54,36 @@ end
 function Rules:with(...: Rule)
 	local newRules = table.clone(self)
 
+	-- Collect list of rules
+	local ruleList = {...}
+
+	-- Create a map of rules to their cloned representations, so we can prevent external mutations to the entire tree of rules
+	local ruleMap = table.clone(newRules._ruleMap)
+	newRules._ruleMap = ruleMap
+
+	-- Freeze all queries
+	for index, rule in ipairs(ruleList) do
+		-- Clone the rule
+		local ruleClone = table.clone(rule)
+
+		-- Map the original to the clone
+		ruleMap[rule] = ruleClone
+
+		-- Freeze rule queries
+		ruleClone.Queries = table.freeze(table.clone(ruleClone.Queries))
+
+		-- Replace the rule in the rule list with the clone, and freeze it
+		ruleList[index] = table.freeze(ruleClone)
+	end
+
+	-- Freeze the rule map
+	table.freeze(ruleMap)
+
 	-- Count all the new rules to add
 	local count = select("#", ...)
 
 	-- Copy the new rules into our clone & increment the stored length
-	table.move({...}, 1, count, newRules.n + 1, newRules)
+	table.move(ruleList, 1, count, newRules.n + 1, newRules)
 	newRules.n += count
 
 	-- Freeze our new set of rules
@@ -69,6 +94,13 @@ function Rules:without(...: Rule)
 	-- Create a map of rules to ignore
 	local rulesToIgnore = {...}
 	for _index, rule in ipairs(rulesToIgnore) do
+		-- Map the rule to its clone, and skip if it doesn't have one (isn't part of this rules set)
+		rule = self._ruleMap[rule]
+		if not rule then
+			continue
+		end
+
+		-- Add the rule to the ignore map
 		rulesToIgnore[rule] = true
 	end
 
