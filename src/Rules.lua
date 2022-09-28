@@ -177,5 +177,5 @@ function Rules:test(value: any, sortComparator: RuleComparator?): RuleResult?
 	return if result.matched then RuleResult.new(matchedRule, matchedQuery, value) else nil
 end
 
-export type Rules = typeof(Rules.new())
+export type Rules = WithMeta<{Rule}, typeof(Rules)>
 return table.freeze(Rules)

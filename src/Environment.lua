@@ -317,5 +317,5 @@ function Environment.isCaller(level: number)
 	return debug.info(1, "s") == debug.info(level + 1, "s")
 end
 
-export type Environment = typeof(Environment.new())
+export type Environment = WithMeta<{}, typeof(Environment)>
 return Environment
