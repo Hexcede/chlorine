@@ -14,6 +14,4 @@ local Chlorine = {
 	Primitives = Primitives;
 }
 
-
-
-return Chlorine
+return table.freeze(Chlorine)
