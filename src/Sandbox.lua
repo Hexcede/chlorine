@@ -98,7 +98,7 @@ function Sandbox.new()
 	return renewSandbox(self)
 end
 
-function Sandbox:Renew()
+function Sandbox:renew()
 	if getAuthor(self._claimed) then
 		error("The Sandbox could not be renewed. Its context is already claimed by another Sandbox.", 2)
 		return
