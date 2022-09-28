@@ -10,13 +10,11 @@ Container.__index = Container
 
 function Container.new()
 	local self = setmetatable({}, Container)
-	self._sandboxes = setmetatable({})
+	self._sandboxes = {}
 	return table.freeze(self):withEnvironment(Environment.new()):withSandbox(Sandbox.new())
 end
 
 function Container:withEnvironment(environment: Environment)
-	environment = environment:clone()
-
 	local clone = table.clone(self)
 
 	local sandboxes = table.clone(clone._sandboxes)
@@ -32,26 +30,49 @@ function Container:withEnvironment(environment: Environment)
 	return table.freeze(clone)
 end
 
-function Container:withSandbox(sandbox: Sandbox)
+function Container:withSandboxes(...: Sandbox)
 	local clone = table.clone(self)
 
 	-- Clone the sandboxes list & add the sandbox
 	clone._sandboxes = table.clone(clone._sandboxes)
-	clone._sandboxes[sandbox] = if clone._environment then clone._environment:boundTo(sandbox) else false
+	for _, sandbox in ipairs({...}) do
+		clone._sandboxes[sandbox] = if clone._environment then clone._environment:boundTo(sandbox) else false
+	end
 
 	-- Return the clone and freeze it
 	return table.freeze(clone)
 end
 
-function Container:withoutSandbox(sandbox: Sandbox)
+function Container:withoutSandboxes(...: Sandbox)
 	local clone = table.clone(self)
 
 	-- Clone the sandboxes list & remove the sandbox
 	clone._sandboxes = table.clone(clone._sandboxes)
-	clone._sandboxes[sandbox] = nil
+	for _, sandbox in ipairs({...}) do
+		clone._sandboxes[sandbox] = nil
+	end
 
 	-- Return the clone and freeze it
 	return table.freeze(clone)
+end
+
+type PackedList = {Sandbox} | {[number]: Sandbox, n: number}
+function Container:replaceSandboxes(sandboxes: {[Sandbox]: Sandbox} | PackedList, newSandboxes: PackedList?)
+	if not newSandboxes then
+		-- Create intermediary tables
+		newSandboxes = {}
+		local oldSandboxes = {}
+
+		-- For each sandbox, insert the key into the old sandboxes list, and the value into the new sandboxes list
+		for sandbox, newSandbox in sandboxes do
+			table.insert(oldSandboxes, sandbox)
+			table.insert(newSandboxes, newSandbox)
+		end
+
+		-- Replace the old sandboxes with the new ones
+		return self:replaceSandboxes(oldSandboxes, newSandboxes)
+	end
+	return self:withSandboxes(unpack(sandboxes, 1, sandboxes.n)):withoutSandboxes(unpack(newSandboxes, 1, newSandboxes.n))
 end
 
 function Container:withRules(...: SandboxRule)
@@ -61,11 +82,24 @@ function Container:withoutRules(...: SandboxRule)
 	return self:withEnvironment(self._environment:withoutRules(...))
 end
 
-function Container:TerminateAll()
+function Container:Terminate()
 	-- Terminate all sandboxes
 	for sandbox, _boundEnv in pairs(self._sandboxes) do
 		sandbox:Terminate()
 	end
+end
+
+function Container:renew()
+	-- Renew all sandboxes
+	local newSandboxes = {}
+	for sandbox, _boundEnv in pairs(self._sandboxes) do
+		newSandboxes[sandbox] = sandbox:renew()
+	end
+	self:replaceSandboxes(newSandboxes)
+end
+
+function Container:Destroy()
+	self:Terminate()
 end
 
 function Container:Spawn(sandbox: Sandbox, callback: (...any) -> ...any, ...: any): (boolean, string?)
