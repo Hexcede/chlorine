@@ -117,4 +117,4 @@ function Reflection:wrap(proxyMetamethod: (...any) -> ...any)
 	return table.freeze(ProxyReflection)
 end
 
-return Reflection
+return table.freeze(Reflection)
