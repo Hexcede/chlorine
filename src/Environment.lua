@@ -222,6 +222,7 @@ function Environment:wrap(target: proxyable, inputMode: ("forLua" | "forBuiltin"
 		})
 	}, ProxyReflection))
 
+	-- Grab the associated sandbox, if any
 	local sandbox = self:GetSandbox()
 	if sandbox then
 		-- Attempt to claim the current environment
