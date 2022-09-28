@@ -17,13 +17,22 @@ return function()
 	-- Import void as a builtin
 	environment:wrap(void, "forBuiltin")
 
-	local it = it;
-	local expect = expect;
-
 	describe("sandbox", function()
+		local it = it;
+		local expect = expect;
+
 		it("should be safe to use", function()
 			expect(sandbox:IsSafe()).to.be.equal(true)
 		end)
+
+		it("should own itself", function()
+			expect(Sandbox.getOwner(sandbox)).to.be.equal(sandbox)
+		end)
+	end)
+
+	describe("thread safety", function()
+		local it = it;
+		local expect = expect;
 
 		it("should not be safe to use in another thread", function()
 			local safe
@@ -54,10 +63,11 @@ return function()
 			expect(safe1).to.be.equal(true)
 			expect(safe2).to.be.equal(true)
 		end)
+	end)
 
-		it("should own itself", function()
-			expect(Sandbox.getOwner(sandbox)).to.be.equal(sandbox)
-		end)
+	describe("thread ancestry", function()
+		local it = it;
+		local expect = expect;
 
 		it("should not own parent thread", function()
 			expect(Sandbox.getOwner(coroutine.running())).to.never.be.equal(sandbox)
