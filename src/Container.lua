@@ -109,4 +109,4 @@ function Container:Spawn(sandbox: Sandbox, callback: (...any) -> ...any, ...: an
 	return sandbox:Spawn(environment:applyTo(callback), ...)
 end
 
-return Container
+return table.freeze(Container)
