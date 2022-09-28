@@ -110,7 +110,8 @@ end
 
 function Sandbox:Terminate(terminationError: string?)
 	checkOwnOwner(self)
-	assert(coroutine.status(self._parentThread) == "running" or coroutine.status(self._parentThread) == "normal", "The Sandbox parent thread is not running.")
+
+	warn("Terminate", debug.traceback(terminationError))
 
 	-- For each value the sandbox has claimed
 	for _, claimedValue in ipairs(checkOwner(self._claimed, self)) do
@@ -133,7 +134,7 @@ function Sandbox:Terminate(terminationError: string?)
 	end
 
 	-- If a termination error is specified, throw it
-	if terminationError and coroutine.status(self._parentThread) ~= "running" then
+	if terminationError then
 		error(string.format("The sandbox was terminated: %s", terminationError), 2)
 	end
 end
@@ -154,8 +155,13 @@ function Sandbox:IsSafe(value: authorable)
 		end
 	end
 
-	-- If the value isn't primitive and the owner isn't this sandbox, return false
-	if not Primitives.isPrimitive(value) and Sandbox.getOwner(value) ~= self then
+	-- If the value is a primitive, it's safe
+	if Primitives.isPrimitive(value) then
+		return true
+	end
+
+	-- If the owner isn't this sandbox, return false
+	if Sandbox.getOwner(value) ~= self then
 		return false
 	end
 
@@ -166,12 +172,18 @@ end
 function Sandbox:AssertSafe(value: authorable?)
 	checkOwnOwner(self)
 
+	-- Allow methods called through Environment -> Sandbox to pass
+	local Environment = require(script.Parent.Environment)
+	if Sandbox.isCaller(2) and Environment.isCaller(3) then
+		return
+	end
+
 	if not self:IsSafe(value) then
 		self:Terminate(if value == nil then "Running in an unsafe context." else "Value is from an unsafe context.")
 	end
 end
 
-function Sandbox:Claim(value: authorable)
+function Sandbox:Claim(value: authorable, _token)
 	checkOwnOwner(self)
 
 	-- Assert that we are running in a safe context
@@ -188,6 +200,26 @@ function Sandbox:Claim(value: authorable)
 	-- Set the author
 	setAuthor(value, self)
 	return true
+end
+
+function Sandbox:Release(value: authorable)
+	checkOwnOwner(self)
+
+	-- Assert that we are running in a safe context
+	self:AssertSafe()
+
+	-- If the thread already has an owner, do not claim the thread
+	if not rawequal(Sandbox.getOwner(value), self) then
+		return false
+	end
+
+	-- Set the author
+	setAuthor(value, nil)
+	return true
+end
+
+function Sandbox:Owns(value: authorable)
+	return rawequal(getAuthor(value), self)
 end
 
 function Sandbox:ApplyEnvironment(env: table)
@@ -209,13 +241,17 @@ function Sandbox:Spawn(callback: (...any) -> (), ...: any): (boolean, string?)
 
 	local sandboxThread = coroutine.create(xpcall)
 	assert(self:Claim(sandboxThread), "Failed to claim thread.")
-	return select(2, (if task then task.spawn else coroutine.resume)(sandboxThread, callback, debug.traceback, ...))
+	return select(2, coroutine.resume(sandboxThread, callback, debug.traceback, ...))
 end
 
 function Sandbox:Destroy()
 	checkOwnOwner(self)
 
 	self:Terminate()
+end
+
+function Sandbox.isCaller(level: number)
+	return debug.info(1, "s") == debug.info(level + 1, "s")
 end
 
 export type Sandbox = typeof(Sandbox.new())

@@ -38,6 +38,11 @@ Environment.rules = table.freeze({
 });
 
 local function addProxy(environment)
+	local sandbox = environment:GetSandbox()
+	if sandbox then
+		sandbox:Claim(environment)
+	end
+
 	local toProxyOld = environment._toProxy
 	local toTargetOld = environment._toTarget
 
@@ -66,7 +71,7 @@ local function addProxy(environment)
 		local target = env and toTargetOld[env]
 		if target then
 			-- Replace the wrapped environment
-			environment._env = environment:wrap(target, "default")
+			environment._env = environment:wrap(target, "default", true)
 		end
 	end
 
@@ -102,12 +107,14 @@ export type proxyable = table | userdata | (...any) -> ...any
 
 -- Wraps all values in the list into proxies
 local function wrapList(environment: Environment, list: {n: number, [number]: any}, inputMode: "forLua" | "forBuiltin" | "default")
+	list.n = list.n or #list
 	for i=1, list.n do
-		list[i] = environment:wrap(list[i], "default")
+		list[i] = environment:wrap(list[i], inputMode)
 	end
 end
 -- Unwraps all values in the list into their proxy targets
 local function unwrapList(environment: Environment, list: {n: number, [number]: any})
+	list.n = list.n or #list
 	for i=1, list.n do
 		list[i] = environment:unwrap(list[i])
 	end
@@ -126,12 +133,6 @@ local function callFunctionTransformed(self: Environment, inputMode: "forLua" | 
 	else
 		error(string.format("Invalid inputMode %s", inputMode), 2)
 	end
-
-	-- -- Debug call
-	-- print("Call", inputMode, debug.info(target, "n"))
-	-- if debug.info(target, "n") == "__call" then
-	-- 	print(debug.info((...), "n"))
-	-- end
 
 	-- Call the target and collect all results
 	local results = table.pack(target(table.unpack(args, 1, args.n)))
@@ -161,6 +162,13 @@ local function proxyMetamethod(proxy: any, ...: any)
 
 	-- Ensure that the environment and target exist
 	assert(environment and target, "The object isn't a valid Proxy.")
+
+	-- Look for a sandbox
+	local sandbox = environment:GetSandbox()
+	if sandbox then
+		-- Try to claim the running thread
+		sandbox:Claim(coroutine.running())
+	end
 
 	-- Call the metamethod
 	return callFunctionTransformed(environment, inputMode, Reflection[metamethod], target, ...)
@@ -209,6 +217,20 @@ function Environment:wrap(target: proxyable, inputMode: ("forLua" | "forBuiltin"
 		})
 	}, ProxyReflection))
 
+	local sandbox = self:GetSandbox()
+	if sandbox then
+		-- Attempt to claim the current environment
+		sandbox:Claim(self)
+
+		-- Try to claim the proxy
+		sandbox:Claim(proxy)
+
+		-- If the target is an RBXScriptSignal, try to claim it
+		if typeof(target) == "RBXScriptSignal" then
+			sandbox:Claim(target)
+		end
+	end
+
 	-- Map the target to the proxy and the proxy to the target
 	self._toProxy[target] = proxy
 	self._toTarget[proxy] = target
@@ -225,13 +247,12 @@ function Environment:unwrap(target: proxyable)
 	if Primitives.isPrimitive(target) or type(target) == "thread" then
 		return target
 	end
-
-	return self._toTarget[target]
+	return self._toTarget[target] or target
 end
 
 function Environment:withFenv(globals: table)
 	local newEnvironment = _clone(self)
-	newEnvironment._env = newEnvironment:wrap(globals, "default")
+	newEnvironment._env = newEnvironment:wrap(globals, "default", true)
 	return table.freeze(newEnvironment)
 end
 
@@ -285,6 +306,10 @@ function Environment:test(value: any, sortComparator: Rules.RuleComparator?): Ru
 
 	-- Return the rule result
 	return ruleResult
+end
+
+function Environment.isCaller(level: number)
+	return debug.info(1, "s") == debug.info(level + 1, "s")
 end
 
 export type Environment = typeof(Environment.new())
