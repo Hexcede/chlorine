@@ -76,7 +76,7 @@ local function addProxy(environment)
 		local target = env and toTargetOld[env]
 		if target then
 			-- Replace the wrapped environment
-			environment._env = environment:wrap(target, "default", true)
+			environment._env = environment:wrap(target)
 		end
 	end
 
@@ -111,7 +111,7 @@ end
 export type proxyable = table | userdata | (...any) -> ...any
 
 -- Wraps all values in the list into proxies
-local function wrapList(environment: Environment, list: {n: number, [number]: any}, inputMode: "forLua" | "forBuiltin" | "default")
+local function wrapList(environment: Environment, list: {n: number, [number]: any}, inputMode: ("forLua" | "forBuiltin")?)
 	list.n = list.n or #list
 	for i=1, list.n do
 		list[i] = environment:wrap(list[i], inputMode)
@@ -143,7 +143,7 @@ local function callFunctionTransformed(self: Environment, inputMode: "forLua" | 
 	local results = table.pack(target(table.unpack(args, 1, args.n)))
 
 	-- Convert all outputs to wrapped values
-	wrapList(self, results, "default")
+	wrapList(self, results)
 
 	-- Unpack results
 	return table.unpack(results, 1, results.n)
@@ -183,7 +183,7 @@ end
 local ProxyReflection = Reflection:wrap(proxyMetamethod)
 
 -- Creates a proxy targeting a particular value
-function Environment:wrap(target: proxyable, inputMode: ("forLua" | "forBuiltin" | "default")): proxyable
+function Environment:wrap(target: proxyable, inputMode: ("forLua" | "forBuiltin")?): proxyable
 	-- Test env rules
 	local ruleResult = self:test(target)
 	if ruleResult then
@@ -200,13 +200,13 @@ function Environment:wrap(target: proxyable, inputMode: ("forLua" | "forBuiltin"
 		return self._toProxy[target]
 	end
 
-	-- If the inputMode is default, and the target is a function, use forBultin if its a CFunction
-	if not inputMode or inputMode == "default" and type(target) == "function" then
+	-- If the target is a function, use forBultin if its a CFunction
+	if not inputMode and type(target) == "function" then
 		inputMode = if debug.info(target, "s") == "[C]" then "forBuiltin" else inputMode
 	end
 
 	-- If the inputMode is default, use forLua
-	if inputMode == "default" then
+	if not inputMode then
 		inputMode = "forLua"
 	end
 
@@ -258,7 +258,7 @@ end
 
 function Environment:withFenv(globals: table)
 	local newEnvironment = _clone(self)
-	newEnvironment._env = newEnvironment:wrap(globals, "default", true)
+	newEnvironment._env = newEnvironment:wrap(globals)
 	return table.freeze(newEnvironment)
 end
 
