@@ -309,7 +309,7 @@ function Sandbox:ClearTimer(): number
 end
 
 -- Adds CPU time (NOTE: Will trigger timeout errors in the caller)
-function Sandbox:AddCPUTime(cpuTime)
+function Sandbox:AddCPUTime(cpuTime: number)
 	local cpuInfo = self.CPUInfo
 	cpuInfo.CPU += cpuTime
 	cpuInfo.LifetimeCPU += cpuTime
