@@ -94,6 +94,16 @@ function Sandbox.new()
 	-- Set the parent thread
 	self._parentThread = coroutine.running()
 
+	-- Create a table for keeping track of CPU execution
+	self._threadTimers = setmetatable({}, weakKeys)
+
+	-- Set CPU
+	self.CPUInfo = {
+		CPU = 0;
+		LifetimeCPU = 0;
+		Timeout = math.huge;
+	}
+
 	-- Renew the sandbox (it is currently in an unusable state)
 	return renewSandbox(self)
 end
@@ -242,6 +252,103 @@ function Sandbox:Spawn(callback: (...any) -> (), ...: any): (boolean, string?)
 	local sandboxThread = coroutine.create(xpcall)
 	assert(self:Claim(sandboxThread), "Failed to claim thread.")
 	return select(2, coroutine.resume(sandboxThread, callback, debug.traceback, ...))
+end
+
+-- Starts the thread's CPU timer
+function Sandbox:StartTimer(thread: thread)
+	local cpuInfo = self.CPUInfo
+
+	-- If the timeout has elapsed when trying to restart the timer, stop it
+	if self:GetCPUTime() > cpuInfo.Timeout then
+		self:StopTimer(thread)
+		return
+	end
+
+	-- If the thread already has an active timer, cancel
+	local startTime = self._threadTimers[thread]
+	if startTime then return end
+
+	-- Start the timer
+	self._threadTimers[thread] = os.clock()
+end
+
+-- Stops the thread's CPU timer
+function Sandbox:StopTimer(thread: thread)
+	-- If the thread doesn't have an active timer, cancel
+	local startTime = self._threadTimers[thread]
+	if not startTime then return end
+
+	-- Remove the active timer
+	self._threadTimers[thread] = nil
+
+	-- Add the CPU time
+	self:AddCPUTime(os.clock() - startTime)
+end
+
+-- Returns the current time the thread has been running for
+function Sandbox:GetTimer(thread: thread)
+	local startTime = self._threadTimers[thread]
+	if startTime then
+		return os.clock() - startTime
+	end
+	return 0
+end
+
+-- Returns the current # of seconds that sandboxed code has consumed
+function Sandbox:GetCPUTime(): number
+	local cpuInfo = self.CPUInfo
+	return cpuInfo.CPU + self:GetTimer(coroutine.running())
+end
+
+-- Resets the timer, and returns the # of seconds that sandboxed code has consumed
+function Sandbox:ClearTimer(): number
+	local cpuInfo = self.CPUInfo
+	local cpu = self:GetCPUTime()
+	cpuInfo.CPU = 0
+	return cpu
+end
+
+-- Adds CPU time (NOTE: Will trigger timeout errors in the caller)
+function Sandbox:AddCPUTime(cpuTime)
+	local cpuInfo = self.CPUInfo
+	cpuInfo.CPU += cpuTime
+	cpuInfo.LifetimeCPU += cpuTime
+
+	-- Check script timeout
+	if cpuInfo.CPU < cpuInfo.Timeout then return end
+	self:Terminate("Script execution timeout reached.")
+end
+
+function Sandbox:SetTimeout(timeout: number?)
+	local cpuInfo = self.CPUInfo
+
+	-- If there is a yield watcher thread active, close it
+	local yieldWatcher = cpuInfo._yieldWatcher
+	if yieldWatcher then
+		closeThread(yieldWatcher)
+	end
+
+	if not timeout then
+		cpuInfo.CPU = 0
+		cpuInfo.Timeout = math.huge
+		return
+	end
+
+	cpuInfo.CPU = 0
+	cpuInfo.Timeout = timeout
+
+	-- Repeatedly yield to the engine and then clear the timer
+	-- If we're in sandbox code and it locks up, ClearTimer will only get called after termination
+	--  since timers are active and the only threads that'll be running are sandboxed ones
+	cpuInfo._yieldWatcher = task.spawn(function()
+		while true do
+			task.wait()
+			self:ClearTimer()
+		end
+	end)
+
+	-- Claim the yield watcher thread
+	self:Claim(cpuInfo._yieldWatcher)
 end
 
 function Sandbox:Destroy()

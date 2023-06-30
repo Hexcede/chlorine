@@ -130,6 +130,10 @@ local function callFunctionTransformed(self: Environment, inputMode: "forLua" | 
 	-- Pack arguments
 	local args = table.pack(...)
 
+	-- Look for a sandbox
+	local sandbox = self:GetSandbox()
+	local thread = coroutine.running()
+
 	-- Convert all input arguments either to their wrapped values, or their targets depending on the input mode
 	if inputMode == "forLua" then
 		wrapList(self, args, inputMode)
@@ -139,14 +143,38 @@ local function callFunctionTransformed(self: Environment, inputMode: "forLua" | 
 		error(string.format("Invalid inputMode %s", inputMode), 2)
 	end
 
+	-- CPU timer (pre-call)
+	if sandbox then
+		-- Start the CPU timer for this thread if entering lua code or unyieldable code, otherwise, stop the timer
+		if inputMode == "forLua" or not coroutine.isyieldable() then
+			sandbox:StartTimer(thread)
+		else
+			sandbox:StopTimer(thread)
+		end
+	end
+
 	-- Call the target and collect all results
-	local results = table.pack(target(table.unpack(args, 1, args.n)))
+	local results = table.pack(xpcall(target, debug.traceback, table.unpack(args, 1, args.n)))
+
+	-- CPU timer (post-call)
+	if sandbox then
+		-- Stop the CPU timer for this thread if exiting lua code, otherwise, start the timer again, we're re-entering sandboxed code
+		if inputMode == "forLua" then
+			sandbox:StopTimer(thread)
+		else
+			sandbox:StartTimer(thread)
+		end
+	end
+
+	-- If the call failed, bubble the error
+	local success, result = table.unpack(results, 1, 2)
+	assert(success, result)
 
 	-- Convert all outputs to wrapped values
 	wrapList(self, results)
 
 	-- Unpack results
-	return table.unpack(results, 1, results.n)
+	return table.unpack(results, 2, results.n)
 end
 
 -- Calls a metamethod by name for the given proxy and arguments
