@@ -41,7 +41,8 @@ local function closeThread(thread: thread)
 	end
 end
 
-local fullyWeak = {__mode = "kv"; __metatable="The metatable is locked."}
+local fullyWeak = table.freeze({__mode = "kv"; __metatable="The metatable is locked."})
+local weakKeys = table.freeze({__mode = "k"; __metatable="The metatable is locked."})
 
 -- Sandbox
 local Sandbox = {}
