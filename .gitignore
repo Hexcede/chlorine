@@ -1,6 +1,7 @@
 /.vscode/
 /Packages/
 /DevPackages/
+sourcemap.json
 
 # Project files
 /chlorine.rbxm
