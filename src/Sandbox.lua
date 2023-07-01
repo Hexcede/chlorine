@@ -1,4 +1,11 @@
 local Primitives = require(script.Parent.Primitives)
+
+local Caller = require(script.Parent.Caller)
+function Caller.Sandbox.isCaller(level: number)
+	return debug.info(1, "s") == debug.info(level + 1, "s")
+end
+table.freeze(Caller.Sandbox)
+
 type primitive = Primitives.primitive
 
 -- If we do not have a warn function, create one
@@ -183,8 +190,7 @@ function Sandbox:AssertSafe(value: authorable?)
 	checkOwnOwner(self)
 
 	-- Allow methods called through Environment -> Sandbox to pass
-	local Environment = require(script.Parent.Environment)
-	if Sandbox.isCaller(2) and Environment.isCaller(3) then
+	if Caller.Sandbox.isCaller(2) and Caller.Environment.isCaller(3) then
 		return
 	end
 
@@ -355,10 +361,6 @@ function Sandbox:Destroy()
 	checkOwnOwner(self)
 
 	self:Terminate()
-end
-
-function Sandbox.isCaller(level: number)
-	return debug.info(1, "s") == debug.info(level + 1, "s")
 end
 
 export type Sandbox = typeof(Sandbox.new())

@@ -3,6 +3,12 @@ local Reflection = require(script.Parent.Reflection)
 local Sandbox = require(script.Parent.Sandbox)
 local Rules = require(script.Parent.Rules)
 
+local Caller = require(script.Parent.Caller)
+function Caller.Environment.isCaller(level: number)
+	return debug.info(1, "s") == debug.info(level + 1, "s")
+end
+table.freeze(Caller.Environment)
+
 type Sandbox = Sandbox.Sandbox
 type Rules = Rules.Rules
 type Rule = Rules.Rule
@@ -340,10 +346,6 @@ function Environment:test(value: any, sortComparator: Rules.RuleComparator?): Ru
 
 	-- Return the rule result
 	return ruleResult
-end
-
-function Environment.isCaller(level: number)
-	return debug.info(1, "s") == debug.info(level + 1, "s")
 end
 
 export type Environment = typeof(Environment.new())
