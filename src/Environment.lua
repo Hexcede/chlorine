@@ -3,6 +3,12 @@ local Reflection = require(script.Parent.Reflection)
 local Sandbox = require(script.Parent.Sandbox)
 local Rules = require(script.Parent.Rules)
 
+local Caller = require(script.Parent.Caller)
+function Caller.Environment.isCaller(level: number)
+	return debug.info(1, "s") == debug.info(level + 1, "s")
+end
+table.freeze(Caller.Environment)
+
 type Sandbox = Sandbox.Sandbox
 type Rules = Rules.Rules
 type Rule = Rules.Rule
@@ -105,10 +111,10 @@ function Environment:boundTo(sandbox: Sandbox)
 end
 
 function Environment:applyTo(functionToBind: (...any) -> ...any): (...any) -> ...any
-	return setfenv(functionToBind, assert(self._env, "Environment is not initialized. Call Environment:withFenv(globals) to initialize it."))
+	return assert(setfenv(functionToBind, (assert(self._env, "Environment is not initialized. Call Environment:withFenv(globals) to initialize it."))))
 end
 
-export type proxyable = table | userdata | (...any) -> ...any
+export type proxyable = {[any]: any} | (...any) -> ...any
 
 -- Wraps all values in the list into proxies
 local function wrapList(environment: Environment, list: {n: number, [number]: any}, inputMode: ("forLua" | "forBuiltin")?)
@@ -284,7 +290,7 @@ function Environment:unwrap(target: proxyable)
 	return self._toTarget[target] or target
 end
 
-function Environment:withFenv(globals: table)
+function Environment:withFenv<K, V>(globals: {[K]: V})
 	local newEnvironment = _clone(self)
 	newEnvironment._env = newEnvironment:wrap(globals)
 	return table.freeze(newEnvironment)
@@ -342,9 +348,5 @@ function Environment:test(value: any, sortComparator: Rules.RuleComparator?): Ru
 	return ruleResult
 end
 
-function Environment.isCaller(level: number)
-	return debug.info(1, "s") == debug.info(level + 1, "s")
-end
-
-export type Environment = WithMeta<{}, typeof(Environment)>
+export type Environment = typeof(Environment.new())
 return table.freeze(Environment)

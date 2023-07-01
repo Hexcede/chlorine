@@ -1,3 +1,4 @@
+--!strict
 local Queries = require(script.Parent.Queries)
 type Query = Queries.Query
 
@@ -5,8 +6,10 @@ type Query = Queries.Query
 local RuleResult = {}
 RuleResult.__index = RuleResult
 
+local any: any = nil
+
 -- The result of a match from Rules:test()
-export type RuleResult = WithMeta<{rule: Rule, query: Query, value: any?}, typeof(RuleResult)>
+export type RuleResult = typeof(setmetatable(any :: {rule: Rule, query: Query, value: any?}, any :: typeof(RuleResult)))
 
 function RuleResult.new(rule: Rule, query: Query, value: any?): RuleResult
 	local result = setmetatable({
@@ -83,7 +86,7 @@ function Rules:with(...: Rule)
 	local count = select("#", ...)
 
 	-- Copy the new rules into our clone & increment the stored length
-	table.move(ruleList, 1, count, newRules.n + 1, newRules)
+	table.move(ruleList, 1, count, newRules.n + 1, newRules :: any)
 	newRules.n += count
 
 	-- Freeze our new set of rules
@@ -92,8 +95,8 @@ end
 
 function Rules:without(...: Rule)
 	-- Create a map of rules to ignore
-	local rulesToIgnore = {...}
-	for _index, rule in ipairs(rulesToIgnore) do
+	local rulesToIgnore = {}
+	for _index, rule in ipairs({...}) do
 		-- Map the rule to its clone, and skip if it doesn't have one (isn't part of this rules set)
 		rule = self._ruleMap[rule]
 		if not rule then
@@ -198,6 +201,7 @@ function Rules:test(value: any, sortComparator: RuleComparator?): RuleResult?
 				break
 			end
 		end
+
 		-- If we matched, stop testing
 		if result.matched then
 			matchedRule = rule;
@@ -205,9 +209,12 @@ function Rules:test(value: any, sortComparator: RuleComparator?): RuleResult?
 		end
 	end
 
+	-- If there is no matched rule or no matched query, cancel
+	if not matchedRule or not matchedQuery then return nil end
+
 	-- Determine the result
 	return if result.matched then RuleResult.new(matchedRule, matchedQuery, value) else nil
 end
 
-export type Rules = WithMeta<{Rule}, typeof(Rules)>
+export type Rules = typeof(Rules.new())
 return table.freeze(Rules)

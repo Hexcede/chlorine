@@ -1,4 +1,11 @@
 local Primitives = require(script.Parent.Primitives)
+
+local Caller = require(script.Parent.Caller)
+function Caller.Sandbox.isCaller(level: number)
+	return debug.info(1, "s") == debug.info(level + 1, "s")
+end
+table.freeze(Caller.Sandbox)
+
 type primitive = Primitives.primitive
 
 -- If we do not have a warn function, create one
@@ -6,7 +13,7 @@ if not warn then
 	-- Try to get the ansicolors library
 	local ansicolors = pcall(require, "ansicolors")
 	function warn(...)
-		print(if ansicolors then ansicolors("%{yellow}[W]") else "[WARNING]", ..., debug.traceback(2))
+		print(if ansicolors then ansicolors("%{yellow}[W]") else "[WARNING]", ..., if ansicolors then ansicolors("%{blue}") else "", debug.traceback(coroutine.running(), nil, 2))
 	end
 end
 
@@ -49,9 +56,9 @@ local Sandbox = {}
 Sandbox.__index = Sandbox
 Sandbox.UnsafeContext = newproxy(false)
 
-export type authorable = thread | table | userdata | (...any) -> ...any;
+export type authorable = thread | {[any]: any} | (...any) -> ...any;
 
-local dataAuthors: WithMeta<{[authorable]: Sandbox}, typeof(fullyWeak)> = setmetatable({}, fullyWeak)
+local dataAuthors = setmetatable({} :: {[authorable]: Sandbox}, fullyWeak)
 local function setAuthor(data: authorable, owner: Sandbox | nil)
 	dataAuthors[data] = owner
 	return data
@@ -183,8 +190,7 @@ function Sandbox:AssertSafe(value: authorable?)
 	checkOwnOwner(self)
 
 	-- Allow methods called through Environment -> Sandbox to pass
-	local Environment = require(script.Parent.Environment)
-	if Sandbox.isCaller(2) and Environment.isCaller(3) then
+	if Caller.Sandbox.isCaller(2) and Caller.Environment.isCaller(3) then
 		return
 	end
 
@@ -232,7 +238,7 @@ function Sandbox:Owns(value: authorable)
 	return rawequal(getAuthor(value), self)
 end
 
-function Sandbox:ApplyEnvironment(env: table)
+function Sandbox:ApplyEnvironment(env: {[string]: any})
 	-- For all claimed functions & threads, apply the fenv
 	for _, claimedValue in ipairs(self._claimed) do
 		if type(claimedValue) == "function" then
@@ -357,9 +363,5 @@ function Sandbox:Destroy()
 	self:Terminate()
 end
 
-function Sandbox.isCaller(level: number)
-	return debug.info(1, "s") == debug.info(level + 1, "s")
-end
-
-export type Sandbox = WithMeta<{}, typeof(Sandbox)>
+export type Sandbox = typeof(Sandbox.new())
 return table.freeze(Sandbox)
