@@ -361,5 +361,5 @@ function Sandbox.isCaller(level: number)
 	return debug.info(1, "s") == debug.info(level + 1, "s")
 end
 
-export type Sandbox = WithMeta<{}, typeof(Sandbox)>
+export type Sandbox = typeof(Sandbox.new())
 return table.freeze(Sandbox)
