@@ -49,7 +49,7 @@ local Sandbox = {}
 Sandbox.__index = Sandbox
 Sandbox.UnsafeContext = newproxy(false)
 
-export type authorable = thread | table | userdata | (...any) -> ...any;
+export type authorable = thread | {[any]: any} | (...any) -> ...any;
 
 local dataAuthors = setmetatable({} :: {[authorable]: Sandbox}, fullyWeak)
 local function setAuthor(data: authorable, owner: Sandbox | nil)
