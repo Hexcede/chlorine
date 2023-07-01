@@ -6,7 +6,7 @@ if not warn then
 	-- Try to get the ansicolors library
 	local ansicolors = pcall(require, "ansicolors")
 	function warn(...)
-		print(if ansicolors then ansicolors("%{yellow}[W]") else "[WARNING]", ..., debug.traceback(2))
+		print(if ansicolors then ansicolors("%{yellow}[W]") else "[WARNING]", ..., if ansicolors then ansicolors("%{blue}") else "", debug.traceback(coroutine.running(), nil, 2))
 	end
 end
 
