@@ -232,7 +232,7 @@ function Sandbox:Owns(value: authorable)
 	return rawequal(getAuthor(value), self)
 end
 
-function Sandbox:ApplyEnvironment(env: table)
+function Sandbox:ApplyEnvironment(env: {[string]: any})
 	-- For all claimed functions & threads, apply the fenv
 	for _, claimedValue in ipairs(self._claimed) do
 		if type(claimedValue) == "function" then
