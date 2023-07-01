@@ -56,25 +56,6 @@ function Container:withoutSandboxes(...: Sandbox)
 	return table.freeze(clone)
 end
 
-type PackedList = {Sandbox} | {[number]: Sandbox, n: number}
-function Container:replaceSandboxes(sandboxes: {[Sandbox]: Sandbox} | PackedList, newSandboxes: PackedList?)
-	if not newSandboxes then
-		-- Create intermediary tables
-		newSandboxes = {}
-		local oldSandboxes = {}
-
-		-- For each sandbox, insert the key into the old sandboxes list, and the value into the new sandboxes list
-		for sandbox, newSandbox in sandboxes do
-			table.insert(oldSandboxes, sandbox)
-			table.insert(newSandboxes, newSandbox)
-		end
-
-		-- Replace the old sandboxes with the new ones
-		return self:replaceSandboxes(oldSandboxes, newSandboxes)
-	end
-	return self:withSandboxes(unpack(sandboxes, 1, sandboxes.n)):withoutSandboxes(unpack(newSandboxes, 1, newSandboxes.n))
-end
-
 function Container:withRules(...: SandboxRule)
 	return self:withEnvironment(self._environment:withRules(...))
 end
@@ -90,12 +71,17 @@ function Container:Terminate()
 end
 
 function Container:renew()
+	local oldSandboxes: {Sandbox} = {}
+	local newSandboxes: {Sandbox} = {}
+
 	-- Renew all sandboxes
-	local newSandboxes = {}
 	for sandbox, _boundEnv in pairs(self._sandboxes) do
-		newSandboxes[sandbox] = sandbox:renew()
+		table.insert(oldSandboxes, sandbox)
+		table.insert(newSandboxes, sandbox:renew())
 	end
-	self:replaceSandboxes(newSandboxes)
+
+	-- Remove old sandboxes & add renewed sandboxes
+	return self:withSandboxes(unpack(newSandboxes)):withoutSandboxes(unpack(oldSandboxes))
 end
 
 function Container:Destroy()
