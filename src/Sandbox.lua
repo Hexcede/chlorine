@@ -121,8 +121,19 @@ function Sandbox:renew()
 		return
 	end
 
-	-- Shallow-clone the sandbox and renew the clone
-	return renewSandbox(table.clone(self))
+	-- Shallow-clone the sandbox
+	local newSandbox = renewSandbox(table.clone(self))
+
+	-- Move all value ownerships from the old sandbox to the new one
+	for value, owner in dataAuthors do
+		if rawequal(value, self) then continue end
+		if rawequal(owner, self) then
+			setAuthor(value, newSandbox)
+		end
+	end
+
+	-- Return the new sandbox
+	return newSandbox
 end
 
 function Sandbox:Terminate(terminationError: string?)
