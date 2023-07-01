@@ -26,7 +26,7 @@ return function()
 		end)
 		it("should work if there are other threads", function()
 			sandbox = sandbox:renew()
-			environment = Environment.new():boundTo(sandbox):withFenv({coroutine = coroutine; task = task; print = print;})
+			environment = environment:boundTo(sandbox)
 
 			sandbox:SetTimeout(0.1)
 			expect(sandbox:Spawn(environment:applyTo(function()

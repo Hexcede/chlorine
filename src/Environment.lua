@@ -89,8 +89,12 @@ local function addProxy(environment)
 	return environment
 end
 
-local function _clone(environment: Environment)
-	return addProxy(table.clone(environment))
+local function _clone(environment: Environment, copyOwner: boolean?)
+	local copy = table.clone(environment)
+	if copyOwner == false then
+		copy._sandbox = nil
+	end
+	return addProxy(copy)
 end
 function Environment.new()
 	local self = setmetatable({}, Environment)
@@ -99,12 +103,12 @@ function Environment.new()
 	return table.freeze(addProxy(self))
 end
 
-function Environment:clone()
-	return table.freeze(_clone(self))
+function Environment:clone(copyOwner: boolean?)
+	return table.freeze(_clone(self, copyOwner))
 end
 
 function Environment:boundTo(sandbox: Sandbox)
-	local newEnvironment = _clone(self)
+	local newEnvironment = _clone(self, false)
 	newEnvironment._sandbox = sandbox
 	sandbox:Claim(newEnvironment)
 	return table.freeze(newEnvironment)
