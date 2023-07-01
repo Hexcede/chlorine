@@ -51,7 +51,7 @@ Sandbox.UnsafeContext = newproxy(false)
 
 export type authorable = thread | table | userdata | (...any) -> ...any;
 
-local dataAuthors: WithMeta<{[authorable]: Sandbox}, typeof(fullyWeak)> = setmetatable({}, fullyWeak)
+local dataAuthors = setmetatable({} :: {[authorable]: Sandbox}, fullyWeak)
 local function setAuthor(data: authorable, owner: Sandbox | nil)
 	dataAuthors[data] = owner
 	return data
