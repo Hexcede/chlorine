@@ -95,5 +95,5 @@ function Container:Spawn(sandbox: Sandbox, callback: (...any) -> ...any, ...: an
 	return sandbox:Spawn(environment:applyTo(callback), ...)
 end
 
-export type Container = WithMeta<{}, typeof(Container)>
+export type Container = typeof(Container.new())
 return table.freeze(Container)
