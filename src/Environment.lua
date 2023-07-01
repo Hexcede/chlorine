@@ -103,8 +103,8 @@ function Environment.new()
 	return table.freeze(addProxy(self))
 end
 
-function Environment:clone()
-	return table.freeze(_clone(self))
+function Environment:clone(copyOwner: boolean?)
+	return table.freeze(_clone(self, copyOwner))
 end
 
 function Environment:boundTo(sandbox: Sandbox)
