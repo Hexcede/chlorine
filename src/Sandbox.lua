@@ -155,7 +155,7 @@ function Sandbox:Terminate(terminationError: string?)
 				end
 
 				closeThread(claimedValue)
-			elseif typeof(claimedValue) == "RBXScriptSignal" then
+			elseif typeof(claimedValue) == "RBXScriptConnection" then
 				claimedValue:Disconnect()
 			end
 		end
