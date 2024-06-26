@@ -213,6 +213,11 @@ local function proxyMetamethod(proxy: any, ...: any)
 		sandbox:Claim(coroutine.running())
 	end
 
+	-- If the metamethod is __call, don't use Reflection or there'll be infinite recursion in forLua mode due to argument wrapping
+	if metamethod == "__call" then
+		return callFunctionTransformed(environment, inputMode, target, ...)
+	end
+
 	-- Call the metamethod
 	return callFunctionTransformed(environment, inputMode, Reflection[metamethod], target, ...)
 end
