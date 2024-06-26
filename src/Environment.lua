@@ -269,8 +269,8 @@ function Environment:wrap(target: proxyable, inputMode: ("forLua" | "forBuiltin"
 		-- Try to claim the proxy
 		sandbox:Claim(proxy)
 
-		-- If the target is an RBXScriptSignal, try to claim it
-		if typeof(target) == "RBXScriptSignal" then
+		-- If the target is an RBXScriptConnection, try to claim it
+		if typeof(target) == "RBXScriptConnection" then
 			sandbox:Claim(target)
 		end
 	end
