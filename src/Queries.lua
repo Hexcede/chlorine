@@ -8,11 +8,13 @@ export type ByTypeOf = {
 	Search: typeof(typeof(nil :: any));
 }
 export type ByComposition = {
-	Mode: "ClassEquals" | "IsA";
+	Mode: "ByComposition";
+	MatchMode: "ClassEquals" | "IsA";
 	Search: string;
 }
 export type ByAncestry = {
-	Mode: "IsDescendantOf" | "IsAncestorOf";
+	Mode: "ByAncestry";
+	MatchMode: "IsDescendantOf" | "IsAncestorOf";
 	Search: Instance;
 	Inclusive: boolean?;
 }
@@ -36,9 +38,9 @@ Queries.all = table.freeze({
 	end;
 	ByComposition = function(query: ByComposition, value: Instance)
 		assert(typeof(value) == "Instance", "Invalid ByComposition query, value is not an Instance.")
-		if query.Mode == "ClassEquals" then	
+		if query.MatchMode == "ClassEquals" then
 			return query.Search == value.ClassName
-		elseif query.Mode == "IsA" then
+		elseif query.MatchMode == "IsA" then
 			return value:IsA(query.Search)
 		end
 		error(string.format("Invalid ByComposition.Mode %s", query.Mode), 2)
@@ -50,9 +52,9 @@ Queries.all = table.freeze({
 			return true
 		end
 
-		if query.Mode == "IsDescendantOf" then
+		if query.MatchMode == "IsDescendantOf" then
 			return query.Search:IsAncestorOf(value)
-		elseif query.Mode == "IsAncestorOf" then
+		elseif query.MatchMode == "IsAncestorOf" then
 			return query.Search:IsDescendantOf(value)
 		end
 		error(string.format("Invalid ByAncestry.Mode %s", query.Mode), 2)
